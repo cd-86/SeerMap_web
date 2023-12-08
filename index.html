@@ -9,17 +9,20 @@
 </head>
 
 <body>
-    <input type="file" id="fileInput" onchange="handleFile()">
-    <canvas id="canvas">
+    <div>
+        <input type="file" id="fileInput" onchange="handleFile()">
+    </div>
+    <canvas id="map">
         此浏览器不支持canvas
       </canvas>
 </body>
 <script>
+    var seerMap;
     window.onload = () => {
-        canvas = document.getElementById('canvas');
-        canvas.width = window.innerWidth;
+        canvas = document.getElementById('map');
+        canvas.width = window.innerWidth - 20;
         canvas.height = window.innerHeight * 0.9;
-        const seerMap = new SeerMap(canvas);
+        seerMap = new SeerMap(canvas);
         // 调整画布大小
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
@@ -43,9 +46,10 @@
             reader.onload = function(e) {
                 // 读取到的文件内容
                 var fileContent = e.target.result;
-
-                // 显示文件内容
-                console.log(fileContent);
+                var obj = JSON.parse(fileContent);
+                seerMap.readMap(obj);
+                // // 显示文件内容
+                // console.log(fileContent);
             };
 
             // 开始读取文件
@@ -53,5 +57,11 @@
         }
     }
 </script>
+<style>
+    #map {
+        margin-top: 5px;
+        border: solid 5px #404040;
+    }
+</style>
 
 </html>

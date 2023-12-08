@@ -3,6 +3,7 @@ class SeerMap {
     private canvas: HTMLCanvasElement;
     private xyzAxis: XYZAxis;
     private mapBg: MapBackground;
+    private mapPoint: MapPoint;
     private camera: Camera2D;
     private mousePrePos: number[];
 
@@ -24,6 +25,7 @@ class SeerMap {
         this.gl.clearColor(0, 0, 0, 1);
         this.xyzAxis = new XYZAxis(this.gl);
         this.mapBg = new MapBackground(this.gl);
+        this.mapPoint = new MapPoint(this.gl);
         /*******************************************************************************/
         this.resizeGL();
         this.draw();
@@ -40,8 +42,17 @@ class SeerMap {
     public draw() {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.mapBg.draw(this.camera);
+        this.mapPoint.draw(this.camera);
         this.xyzAxis.draw(this.camera);
         
+    }
+
+    public readMap(smap: SMap) {
+        const reader = new MapReader;
+        reader.readMapPoints(smap);
+        this.mapPoint.setData(reader.points, reader.pointsIndices);
+        this.mapBg.setBound(reader.pointsBound, 10);
+        this.draw();
     }
 
     private mouseClicked(event: MouseEvent) {
