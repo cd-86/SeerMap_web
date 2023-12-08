@@ -1,0 +1,13 @@
+{  
+  "compilerOptions": {
+    "outFile": "../script.js",
+    "target": "es5",  
+    "strict": true  
+  },  
+  "include": [  
+    "*.ts"
+  ],  
+  "exclude": [  
+    "node_modules"  
+  ]  
+}

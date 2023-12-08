@@ -1,0 +1,3 @@
+```
+tsc --build .\tsconfig.json
+```
