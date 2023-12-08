@@ -42,7 +42,6 @@ class Camera2D {
 
         this.projectionMat.setIdentity();
         const z = this.zoom.elements;
-        console.log(-this.width/2 * z[0], this.width/2 * z[0], -this.height/2 * z[1], this.height/2 * z[1], 0.1, 10000);
         
         this.projectionMat.ortho(-this.width/2 * z[0], this.width/2 * z[0], -this.height/2 * z[1], this.height/2 * z[1], 0.1, 10000);
     }

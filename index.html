@@ -9,16 +9,49 @@
 </head>
 
 <body>
+    <input type="file" id="fileInput" onchange="handleFile()">
     <canvas id="canvas">
         此浏览器不支持canvas
       </canvas>
 </body>
-
-<style>
-    #canvas {
-        width: 100%;
-        height: 100%;
+<script>
+    window.onload = () => {
+        canvas = document.getElementById('canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight * 0.9;
+        const seerMap = new SeerMap(canvas);
+        // 调整画布大小
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight * 0.9;
+            seerMap.resizeGL();
+        });
     }
-</style>
+
+    function handleFile() {
+        // 获取文件输入框元素
+        var fileInput = document.getElementById('fileInput');
+
+        // 获取选择的文件
+        var file = fileInput.files[0];
+
+        if (file) {
+            // 创建文件读取器
+            var reader = new FileReader();
+
+            // 设置文件读取完成时的回调函数
+            reader.onload = function(e) {
+                // 读取到的文件内容
+                var fileContent = e.target.result;
+
+                // 显示文件内容
+                console.log(fileContent);
+            };
+
+            // 开始读取文件
+            reader.readAsText(file);
+        }
+    }
+</script>
 
 </html>

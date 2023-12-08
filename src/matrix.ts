@@ -1,7 +1,17 @@
 class Matrix4 {
-    public elements = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-    constructor() {
-
+    public elements: Float32Array;
+    constructor(mat: Matrix4 | null = null) {
+        if (mat) {
+            var i, s, d;
+            s = mat.elements;
+            d = new Float32Array(16);
+            for (i = 0; i < 16; ++i) {
+                d[i] = s[i];
+            }
+            this.elements = d;
+        } else {
+            this.elements = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+        }
     }
 
     public setIdentity(): this {
@@ -24,6 +34,14 @@ class Matrix4 {
             d[i] = s[i];
         }
         return this;
+    }
+
+    public static multiplyMatris(...args: Matrix4[]) : Matrix4{
+        var mat = new Matrix4(args[0]);
+        for (let i = 1; i < args.length; i++) {
+            mat.multiply(args[i]);
+        }
+        return mat;
     }
 
     public concat(other: Matrix4): this {
