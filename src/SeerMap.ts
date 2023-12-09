@@ -4,6 +4,7 @@ class SeerMap {
     private xyzAxis: XYZAxis;
     private mapBg: MapBackground;
     private mapPoint: MapPoint;
+    private mapLine: MapLine;
     private camera: Camera2D;
     private mousePrePos: number[];
 
@@ -15,17 +16,19 @@ class SeerMap {
         // 鼠标按下
         canvas.addEventListener('mousedown', this.mouseClicked.bind(this));
         // 鼠标释放
-        canvas.addEventListener('mouseup', this.mouseReleased.bind(this));
+        window.addEventListener('mouseup', this.mouseReleased.bind(this));
         // 鼠标移动
-        canvas.addEventListener('mousemove', this.mouseMoved.bind(this));
+        window.addEventListener('mousemove', this.mouseMoved.bind(this));
         // 滚轮事件
         canvas.addEventListener('wheel', this.mouseWheel.bind(this));
         this.camera = new Camera2D(canvas.width, canvas.height);
         /*** 实例化着色器程序************************************************************/
         this.gl.clearColor(0, 0, 0, 1);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
         this.xyzAxis = new XYZAxis(this.gl);
         this.mapBg = new MapBackground(this.gl);
         this.mapPoint = new MapPoint(this.gl);
+        this.mapLine = new MapLine(this.gl);
         /*******************************************************************************/
         this.resizeGL();
         this.draw();
@@ -36,21 +39,24 @@ class SeerMap {
         this.camera.setSize(this.canvas.width, this.canvas.height);
         this.camera.updateCamera();
         this.draw();
-
     }
 
     public draw() {
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.mapBg.draw(this.camera);
         this.mapPoint.draw(this.camera);
+        this.gl.enable(this.gl.BLEND);
+        this.mapLine.draw(this.camera);
+        this.gl.disable(this.gl.BLEND);
         this.xyzAxis.draw(this.camera);
-        
     }
 
-    public readMap(smap: SMap) {
+    public readMap(smap: Seer.Map) {
         const reader = new MapReader;
         reader.readMapPoints(smap);
         this.mapPoint.setData(reader.points, reader.pointsIndices);
+        reader.readMapLines(smap);
+        this.mapLine.setData(reader.lines, reader.linesIndices);
         this.mapBg.setBound(reader.pointsBound, 10);
         this.draw();
     }

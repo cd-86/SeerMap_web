@@ -49,8 +49,16 @@ class MapPoint {
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindVertexArray(null);
     }
+
+    public destroy() {
+        this.gl.deleteVertexArray(this.vao);
+        this.gl.deleteBuffer(this.vbo);
+        this.gl.deleteBuffer(this.ebo);
+        this.gl.deleteProgram(this.shader);
+    }
     
     public setData(vertextData: Float32Array, indices: Uint32Array) {
+        
         this.count = indices.length;
 
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vbo);

@@ -15,29 +15,36 @@ class MapBackground {
             gl_Position = uMatrix * vec4(aPosition, 0, 1);
         }
         `;
-    
+
         const FRAGMENT: string = `
         void main() {
             gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
         }
         `;
         this.shader = createShaderProgram(gl, VERTEX, FRAGMENT);
-    
+
         this.vao = gl.createVertexArray();
         this.vbo = gl.createBuffer();
-    
+
         gl.bindVertexArray(this.vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 
-        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2*4, 0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0);
         gl.enableVertexAttribArray(0);
-    
+
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindVertexArray(null);
     }
 
-        
+    public destroy() {
+        this.gl.deleteVertexArray(this.vao);
+        this.gl.deleteBuffer(this.vbo);
+        this.gl.deleteProgram(this.shader);
+    }
+
+
     public setBound(rect: number[], offset: number = 0) {
+
         this.count = 4;
         let vertextData = new Float32Array(4 * 2);
         vertextData[0] = rect[0] - offset;

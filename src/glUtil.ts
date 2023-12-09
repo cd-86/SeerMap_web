@@ -29,7 +29,10 @@ function createShaderProgram(gl: WebGL2RenderingContext, vertextCode: string, fr
     gl.attachShader(program, fragmentShader);
 
     gl.linkProgram(program);
-    
+
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
+
     const log = gl.getProgramInfoLog(program);
     if (log) {
         console.log(log);
