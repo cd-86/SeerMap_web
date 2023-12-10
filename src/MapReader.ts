@@ -17,21 +17,22 @@ class MapReader {
     public pointsBound: number[] = [];
     public lines!: Float32Array;
     public linesIndices!: Uint32Array;
+    public meshes!: Float32Array;
+    public meshesIndices!: Uint32Array;
+    public meshesBound: number[] = [];
     constructor() {
     }
 
-    public readMapPoints(smap: Seer.Map) {
+    // 点
 
-        // var size = smap.normalPosList?.length + smap.rssiPosList?.length;
-        // this.points = new Float32Array(size * 4 * 3);
-        // this.pointsIndices = new Uint32Array(size * 6);
+    public readMapPoints(smap: Seer.Map) {
         var vertext: number[] = [];
         var indices: number[] = [];
 
         if (smap.normalPosList.length != 0) {
-            this.pointsBound = [smap.normalPosList[0].x, smap.normalPosList[0].x, smap.normalPosList[0].y, smap.normalPosList[0].y];
+            this.pointsBound = [smap.normalPosList[0].x || 0, smap.normalPosList[0].x || 0, smap.normalPosList[0].y || 0, smap.normalPosList[0].y || 0];
         } else if (smap.rssiPosList.length != 0) {
-            this.pointsBound = [smap.rssiPosList[0].x, smap.rssiPosList[0].x, smap.rssiPosList[0].y, smap.rssiPosList[0].y];
+            this.pointsBound = [smap.rssiPosList[0].x || 0, smap.rssiPosList[0].x || 0, smap.rssiPosList[0].y || 0, smap.rssiPosList[0].y || 0];
         }
 
         var index = 0;
@@ -71,7 +72,9 @@ class MapReader {
         this.pointsIndices = new Uint32Array(indices);
     }
 
+    // 线
     private static calcLineMesh(points: Seer.MapPos[], arrow: LineArrow, color: number[], vertext: number[], indices: number[]) {
+
         // if (points.length < 2) return;
         var p1x, p2x, p1y, p2y, tempDiffX, tempDiffY, offsetX, offsetY, centerX, centerY, norm;
         var diffX = ((points[1].y || 0) - (points[0].y || 0)) * -1;
@@ -249,6 +252,11 @@ class MapReader {
             let theta1 = Math.atan2(y1 - y, x1 - x);
             let theta3 = Math.atan2(y3 - y, x3 - x);
 
+            if (((x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2)) > 0) {
+                if (theta1 > theta3) theta3 += 2 * Math.PI;
+            } else {
+                if (theta1 < theta3) theta3 -= 2 * Math.PI;
+            }
             for (let i = 0; i < N; i++) {
                 let theta = theta3 + (theta1 - theta3) * i / (N - 1);
                 points.push({
@@ -322,7 +330,7 @@ class MapReader {
             }
             u += Epsilon + 0.01;
         }
-        outPoints.unshift(inPoints[0]);
+        // outPoints.unshift(inPoints[0]);
         outPoints.push(inPoints[inPoints.length - 1]);
     }
 
@@ -341,6 +349,7 @@ class MapReader {
             ]
             MapReader.generateKnots(inPoints, n, k, knots);
             MapReader.generatePath(inPoints, n, k, knots, outPoints);
+
             MapReader.calcLineMesh(outPoints, obj[kk].arrow, color, vertext, indices);
         }
     }
@@ -449,5 +458,65 @@ class MapReader {
 
         this.lines = new Float32Array(vertext);
         this.linesIndices = new Uint32Array(indices);
+    }
+
+    // 站点 ~~高级区域 二维码区域 库位 ...~~
+    public readMapMesh(smap: Seer.Map) {
+        var vertext: number[] = [];
+        var indices: number[] = [];
+
+        if (smap.advancedPointList?.length != 0) {
+            this.meshesBound = [
+                smap.advancedPointList[0].pos.x || 0,
+                smap.advancedPointList[0].pos.x || 0,
+                smap.advancedPointList[0].pos.y || 0,
+                smap.advancedPointList[0].pos.y || 0
+            ];
+        }
+
+        var index = 0;
+        const LEN = 0.2;
+        const textCoords = {
+            LocationMark: { p1: { x: 0, y: 0 }, p2: { x: 1 / 9, y: 0 }, p3: { x: 1 / 9, y: 1 }, p4: { x: 0, y: 1 } },
+            ActionPoint: { p1: { x: 1 / 9, y: 0 }, p2: { x: 2 / 9, y: 0 }, p3: { x: 2 / 9, y: 1 }, p4: { x: 1 / 9, y: 1 } },
+            ChargePoint: { p1: { x: 2 / 9, y: 0 }, p2: { x: 3 / 9, y: 0 }, p3: { x: 3 / 9, y: 1 }, p4: { x: 2 / 9, y: 1 } },
+            ParkPoint: { p1: { x: 3 / 9, y: 0 }, p2: { x: 4 / 9, y: 0 }, p3: { x: 4 / 9, y: 1 }, p4: { x: 3 / 9, y: 1 } },
+            SwitchMap: { p1: { x: 4 / 9, y: 0 }, p2: { x: 5 / 9, y: 0 }, p3: { x: 5 / 9, y: 1 }, p4: { x: 4 / 9, y: 1 } },
+            HomeRegion: { p1: { x: 5 / 9, y: 0 }, p2: { x: 6 / 9, y: 0 }, p3: { x: 6 / 9, y: 1 }, p4: { x: 5 / 9, y: 1 } },
+            TransferLocation: { p1: { x: 6 / 9, y: 0 }, p2: { x: 7 / 9, y: 0 }, p3: { x: 7 / 9, y: 1 }, p4: { x: 6 / 9, y: 1 } },
+            WorkingLocation: { p1: { x: 7 / 9, y: 0 }, p2: { x: 8 / 9, y: 0 }, p3: { x: 8 / 9, y: 1 }, p4: { x: 7 / 9, y: 1 } }
+        }
+        smap.advancedPointList?.forEach((ap) => {
+            let x = ap.pos.x || 0;
+            let y = ap.pos.y || 0;
+            let cos = Math.cos(ap.dir || 0);
+            let sin = Math.sin(ap.dir || 0);
+            this.meshesBound[0] = Math.min(x, this.meshesBound[0]);
+            this.meshesBound[1] = Math.max(x, this.meshesBound[1]);
+            this.meshesBound[2] = Math.min(y, this.meshesBound[2]);
+            this.meshesBound[3] = Math.max(y, this.meshesBound[3]);
+
+            let x1 = (-LEN * cos) - (LEN * sin) + x;
+            let y1 = (-LEN * sin) + (LEN * cos) + y;
+            let x2 = (LEN * cos) - (LEN * sin) + x;
+            let y2 = (LEN * sin) + (LEN * cos) + y;
+            let x3 = (LEN * cos) - (-LEN * sin) + x;
+            let y3 = (LEN * sin) + (-LEN * cos) + y;
+            let x4 = (-LEN * cos) - (-LEN * sin) + x;
+            let y4 = (-LEN * sin) + (-LEN * cos) + y;
+
+            let coord = textCoords[<keyof typeof textCoords>ap.className]
+            let ignoreDir = (ap.ignoreDir || false) ? 1 : 0;
+            vertext.push(
+                x1, y1, coord.p1.x, coord.p1.y, 0, ignoreDir,
+                x2, y2, coord.p2.x, coord.p2.y, 1, ignoreDir,
+                x3, y3, coord.p3.x, coord.p3.y, 1, ignoreDir,
+                x4, y4, coord.p4.x, coord.p4.y, 0, ignoreDir
+            );
+            indices.push(index + 0, index + 1, index + 2, index + 0, index + 2, index + 3);
+            index += 4;
+        });
+        this.meshes = new Float32Array(vertext);
+        this.meshesIndices = new Uint32Array(indices);
     }
 }

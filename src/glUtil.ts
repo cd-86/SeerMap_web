@@ -24,7 +24,17 @@ function createShaderProgram(gl: WebGL2RenderingContext, vertextCode: string, fr
     gl.shaderSource(vertexShader, vertextCode);
     gl.shaderSource(fragmentShader, fragmentCode);
     gl.compileShader(vertexShader);
+    let log = gl.getShaderInfoLog(vertexShader);
+    if (log) {
+        console.log(log);
+        return null;
+    }
     gl.compileShader(fragmentShader);
+    log = gl.getShaderInfoLog(fragmentShader);
+    if (log) {
+        console.log(log);
+        return null;
+    }
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
 
@@ -33,7 +43,7 @@ function createShaderProgram(gl: WebGL2RenderingContext, vertextCode: string, fr
     gl.deleteShader(vertexShader);
     gl.deleteShader(fragmentShader);
 
-    const log = gl.getProgramInfoLog(program);
+    log = gl.getProgramInfoLog(program);
     if (log) {
         console.log(log);
         return null;

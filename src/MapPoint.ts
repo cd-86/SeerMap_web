@@ -9,11 +9,11 @@ class MapPoint {
 
     constructor(gl: WebGL2RenderingContext) {
         this.gl = gl;
-        const VERTEX: string = `
-        attribute vec2 aPosition;
-        attribute float aColor;
+        const VERTEX: string = `#version 300 es
+        layout (location = 0) in vec2 aPosition;
+        layout (location = 1) in float aColor;
 
-        varying vec4 vColor;
+        out vec4 vColor;
 
         uniform mat4 uMatrix;
         void main() {
@@ -22,13 +22,15 @@ class MapPoint {
         }
         `;
     
-        const FRAGMENT: string = `
+        const FRAGMENT: string = `#version 300 es
         precision mediump float;
 
-        varying vec4 vColor;
+        in vec4 vColor;
+
+        out vec4 FragColor;
 
         void main() {
-            gl_FragColor = vColor;
+            FragColor = vColor;
         }
         `;
         this.shader = createShaderProgram(gl, VERTEX, FRAGMENT);

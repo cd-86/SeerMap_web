@@ -8,17 +8,21 @@ class MapBackground {
 
     constructor(gl: WebGL2RenderingContext) {
         this.gl = gl;
-        const VERTEX: string = `
-        attribute vec2 aPosition;
+        const VERTEX: string = `#version 300 es
+        layout (location = 0) in vec2 aPosition;
+
         uniform mat4 uMatrix;
         void main() {
             gl_Position = uMatrix * vec4(aPosition, 0, 1);
         }
         `;
 
-        const FRAGMENT: string = `
+        const FRAGMENT: string = `#version 300 es
+        precision mediump float;
+        out vec4 FragColor;
+
         void main() {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            FragColor = vec4(1.0, 1.0, 1.0, 1.0);
         }
         `;
         this.shader = createShaderProgram(gl, VERTEX, FRAGMENT);

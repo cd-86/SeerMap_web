@@ -5,11 +5,12 @@ class SeerMap {
     private mapBg: MapBackground;
     private mapPoint: MapPoint;
     private mapLine: MapLine;
+    private mapMesh: MapMesh;
     private camera: Camera2D;
     private mousePrePos: number[];
 
     constructor(canvas: HTMLCanvasElement) {
-        this.mousePrePos = [0,0,0];
+        this.mousePrePos = [0, 0, 0];
         // 获取OpenGLES2.0 上下文
         this.gl = canvas.getContext('webgl2')!!;
         this.canvas = canvas;
@@ -29,6 +30,7 @@ class SeerMap {
         this.mapBg = new MapBackground(this.gl);
         this.mapPoint = new MapPoint(this.gl);
         this.mapLine = new MapLine(this.gl);
+        this.mapMesh = new MapMesh(this.gl);
         /*******************************************************************************/
         this.resizeGL();
         this.draw();
@@ -47,6 +49,7 @@ class SeerMap {
         this.mapPoint.draw(this.camera);
         this.gl.enable(this.gl.BLEND);
         this.mapLine.draw(this.camera);
+        this.mapMesh.draw(this.camera);
         this.gl.disable(this.gl.BLEND);
         this.xyzAxis.draw(this.camera);
     }
@@ -54,9 +57,14 @@ class SeerMap {
     public readMap(smap: Seer.Map) {
         const reader = new MapReader;
         reader.readMapPoints(smap);
-        this.mapPoint.setData(reader.points, reader.pointsIndices);
+        if (reader.points && reader.pointsIndices)
+            this.mapPoint.setData(reader.points, reader.pointsIndices);
         reader.readMapLines(smap);
-        this.mapLine.setData(reader.lines, reader.linesIndices);
+        if (reader.lines && reader.linesIndices)
+            this.mapLine.setData(reader.lines, reader.linesIndices);
+        reader.readMapMesh(smap);
+        if (reader.meshes, reader.meshesIndices)
+            this.mapMesh.setData(reader.meshes, reader.meshesIndices);
         this.mapBg.setBound(reader.pointsBound, 10);
         this.draw();
     }
