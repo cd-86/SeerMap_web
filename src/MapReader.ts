@@ -4,6 +4,13 @@ enum LineArrow {
     TowWay
 }
 
+type lineObject = {
+    [key: string]: {
+        arrow: LineArrow,
+        line: Seer.AdvancedCurve
+    }
+};
+const N: number = 100;
 class MapReader {
     public points!: Float32Array;
     public pointsIndices!: Uint32Array;
@@ -120,31 +127,326 @@ class MapReader {
         p2x = centerX - offsetX;
         p2y = centerY - offsetY;
         vertext.push(
-            p1x, p1y, 1, 0, 0, 0.5,
-            p2x, p2y, 1, 0, 0, 0.5
+            p1x, p1y, 1, 0, 0, 0.8,
+            p2x, p2y, 1, 0, 0, 0.8
         );
         offsetX = diffY * -1 / norm * 0.08;
         offsetY = diffX / norm * 0.08;
         vertext.push(
-            centerX + offsetX, centerY + offsetY, 1, 0, 0, 0.5,
-            p2x, p2y, 1, 0, 0, 0.5
+            centerX + offsetX, centerY + offsetY, 1, 0, 0, 0.8,
         );
         indices.push(index, index + 1, index + 2);
         if (arrow == LineArrow.TowWay) {
             vertext.push(
-                centerX - offsetX, centerY - offsetY, 1, 0, 0, 0.5,
-                p2x, p2y, 1, 0, 0, 0.5
+                centerX - offsetX, centerY - offsetY, 1, 0, 0, 0.8,
             );
             indices.push(index, index + 1, index + 3);
+        }
+    }
+
+    private static calcBezierMesh(obj: lineObject, color: number[], vertext: number[], indices: number[]) {
+        var p1x, p2x, p3x, p4x, p1y, p2y, p3y, p4y, s, v;
+        for (const k in obj) {
+            let points: Seer.MapPos[] = [];
+            p1x = obj[k].line.startPos.pos.x || 0;
+            p1y = obj[k].line.startPos.pos.y || 0;
+            p2x = obj[k].line.controlPos1.x || 0;
+            p2y = obj[k].line.controlPos1.y || 0;
+            p3x = obj[k].line.controlPos2.x || 0;
+            p3y = obj[k].line.controlPos2.y || 0;
+            p4x = obj[k].line.endPos.pos.x || 0;
+            p4y = obj[k].line.endPos.pos.y || 0;
+            for (let i = 0; i < N; ++i) {
+                v = i / (N - 1);
+                s = 1 - v;
+                points.push(
+                    {
+                        x: (s * s * s) * p1x + 3 * (s * s) * v * p2x + 3 * s * (v * v) * p3x + (v * v * v) * p4x,
+                        y: (s * s * s) * p1y + 3 * (s * s) * v * p2y + 3 * s * (v * v) * p3y + (v * v * v) * p4y,
+                        z: 0
+                    }
+                );
+            }
+
+            MapReader.calcLineMesh(points, obj[k].arrow, color, vertext, indices);
+        }
+    }
+
+    private static calcDegenerateBezierMesh(obj: lineObject, color: number[], vertext: number[], indices: number[]) {
+        var p1x, p2x, p3x, p4x, p1y, p2y, p3y, p4y, s, v;
+        for (const k in obj) {
+            let points: Seer.MapPos[] = [];
+            p1x = obj[k].line.startPos.pos.x || 0;
+            p1y = obj[k].line.startPos.pos.y || 0;
+            p2x = obj[k].line.controlPos1.x || 0;
+            p2y = obj[k].line.controlPos1.y || 0;
+            p3x = obj[k].line.controlPos2.x || 0;
+            p3y = obj[k].line.controlPos2.y || 0;
+            p4x = obj[k].line.endPos.pos.x || 0;
+            p4y = obj[k].line.endPos.pos.y || 0;
+            for (let i = 0; i < N; ++i) {
+                v = i / (N - 1);
+                s = 1 - v;
+                points.push(
+                    {
+                        x: (s * s * s * s * s) * p1x +
+                            5 * (s * s * s * s) * v * p2x +
+                            10 * (s * s * s) * (v * v) * p2x +
+                            10 * (s * s) * (v * v * v) * p3x +
+                            5 * (s) * (v * v * v * v) * p3x +
+                            (v * v * v * v * v) * p4x,
+                        y: (s * s * s * s * s) * p1y +
+                            5 * (s * s * s * s) * v * p2y +
+                            10 * (s * s * s) * (v * v) * p2y +
+                            10 * (s * s) * (v * v * v) * p3y +
+                            5 * (s) * (v * v * v * v) * p3y +
+                            (v * v * v * v * v) * p4y,
+                        z: 0
+                    }
+                );
+            }
+
+            MapReader.calcLineMesh(points, obj[k].arrow, color, vertext, indices);
+        }
+    }
+
+    private static calcStraightMesh(obj: lineObject, color: number[], vertext: number[], indices: number[]) {
+        var p1x, p2x, p1y, p2y;
+        for (const k in obj) {
+            MapReader.calcLineMesh([obj[k].line.startPos.pos, obj[k].line.endPos.pos], obj[k].arrow, color, vertext, indices);
+        }
+    }
+
+    private static calcArcMesh(obj: lineObject, color: number[], vertext: number[], indices: number[]) {
+        var x1, x2, x3, y1, y2, y3;
+        for (const k in obj) {
+            x1 = obj[k].line.startPos.pos.x || 0;
+            y1 = obj[k].line.startPos.pos.y || 0;
+            x2 = obj[k].line.controlPos1.x || 0;
+            y2 = obj[k].line.controlPos1.y || 0;
+            x3 = obj[k].line.endPos.pos.x || 0;
+            y3 = obj[k].line.endPos.pos.y || 0;
+
+            let A = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2;
+            if (Math.abs(A) <= 1e-12) {
+                MapReader.calcLineMesh([obj[k].line.startPos.pos, obj[k].line.endPos.pos], obj[k].arrow, color, vertext, indices);
+                continue;
+            }
+            let points: Seer.MapPos[] = [];
+
+            let x1x1py1y1 = x1 * x1 + y1 * y1;
+            let x2x2py2y2 = x2 * x2 + y2 * y2;
+            let x3x3py3y3 = x3 * x3 + y3 * y3;
+
+            let B = x1x1py1y1 * (-y2 + y3) + x2x2py2y2 * (y1 - y3) + x3x3py3y3 * (y2 - y1);
+            let C = x1x1py1y1 * (x2 - x3) + x2x2py2y2 * (x3 - x1) + x3x3py3y3 * (x1 - x2);
+            let D = x1x1py1y1 * (x3 * y2 - x2 * y3) + x2x2py2y2 * (x1 * y3 - x3 * y1) + x3x3py3y3 * (x2 * y1 - x1 * y2);
+
+            let x = -B / (2 * A);
+            let y = -C / (2 * A);
+            let r = Math.sqrt((B * B + C * C - 4 * A * D) / (4 * A * A));
+
+            let theta1 = Math.atan2(y1 - y, x1 - x);
+            let theta3 = Math.atan2(y3 - y, x3 - x);
+
+            for (let i = 0; i < N; i++) {
+                let theta = theta3 + (theta1 - theta3) * i / (N - 1);
+                points.push({
+                    x: x + r * Math.cos(theta),
+                    y: y + r * Math.sin(theta),
+                    z: 0
+                });
+            }
+            MapReader.calcLineMesh(points, obj[k].arrow, color, vertext, indices);
+        }
+    }
+
+    private static generateKnots(points: Seer.MapPos[], n: number, k: number, knots: number[]) {
+        for (let i = 0; i < k; i++) {
+            knots[i] = 0;
+        }
+        for (let i = n + 1; i < n + k + 1; i++) {
+            knots[i] = 1;
+        }
+        let denominator = 0;
+        let numerator: number[] = [];
+        for (let loop1 = k; loop1 <= n + 1; loop1++) {
+            let temp = 0;
+            for (let loop2 = loop1 - k; loop2 <= loop1 - 2; loop2++) {
+                let diff_x = (points[loop2 + 1].x || 0) - (points[loop2].x || 0);
+                let diff_y = (points[loop2 + 1].y || 0) - (points[loop2].y || 0);
+                temp += Math.sqrt(diff_x * diff_x + diff_y * diff_y);
+            }
+            denominator += temp;
+            numerator.push(temp);
+        }
+        for (let loop1 = k; loop1 <= n + 1; loop1++) {
+            knots[loop1] = knots[loop1 - 1] + numerator[loop1 - k] / denominator;
+        }
+    }
+
+    private static bValue(knots: number[], i: number, k: number, u: number): number {
+        if (k == 1) {
+            if (knots[i] < u && u <= knots[i + 1]) {
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+        let front = 0, after = 0;
+        if (u - knots[i] != 0 && knots[i + k - 1] - knots[i] != 0) {
+            front = (u - knots[i]) / (knots[i + k - 1] - knots[i]);
+        }
+        if (knots[i + k] - u != 0 && knots[i + k] - knots[i + 1] != 0) {
+            after = (knots[i + k] - u) / (knots[i + k] - knots[i + 1]);
+        }
+        return front * MapReader.bValue(knots, i, k - 1, u) + after * MapReader.bValue(knots, i + 1, k - 1, u);
+    }
+
+    private static generatePath(inPoints: Seer.MapPos[], n: number, k: number, knots: number[], outPoints: Seer.MapPos[]) {
+        const Epsilon = 1e-10;
+        let u = 0;
+        while (u <= 1) {
+            let temp_fenzi_x = 0;
+            let temp_fenzi_y = 0;
+            let temp_fenmu = 0;
+            for (let i = 0; i <= n; i++) {
+                let v = inPoints[i].z * MapReader.bValue(knots, i, k, u);
+                temp_fenzi_x += inPoints[i].x * v;
+                temp_fenzi_y += inPoints[i].y * v;
+                temp_fenmu += v;
+            }
+            if (temp_fenmu != 0) {
+                outPoints.push({ x: temp_fenzi_x / temp_fenmu, y: temp_fenzi_y / temp_fenmu, z: 0 });
+            }
+            u += Epsilon + 0.01;
+        }
+        outPoints.unshift(inPoints[0]);
+        outPoints.push(inPoints[inPoints.length - 1]);
+    }
+
+    private static calcNURBS6Mesh(obj: lineObject, color: number[], vertext: number[], indices: number[]) {
+        const n = 5, k = 4;
+        var knots: Array<number> = Array(n + k + 1); // n+k+1
+        for (const kk in obj) {
+            let outPoints: Seer.MapPos[] = [];
+            let inPoints = [
+                obj[kk].line.startPos.pos,
+                obj[kk].line.controlPos1,
+                obj[kk].line.controlPos2,
+                obj[kk].line.controlPos3,
+                obj[kk].line.controlPos4,
+                obj[kk].line.endPos.pos
+            ]
+            MapReader.generateKnots(inPoints, n, k, knots);
+            MapReader.generatePath(inPoints, n, k, knots, outPoints);
+            MapReader.calcLineMesh(outPoints, obj[kk].arrow, color, vertext, indices);
         }
     }
 
     public readMapLines(smap: Seer.Map) {
         var vertext: number[] = [];
         var indices: number[] = [];
-        smap.advancedLineList?.forEach((l) => {
-            MapReader.calcLineMesh([l.line.startPos, l.line.endPos], LineArrow.None, [1, 0, 0, 0.5], vertext, indices);
+        smap.advancedLineList?.forEach(l => {
+            MapReader.calcLineMesh([l.line.startPos, l.line.endPos], LineArrow.None, [1, 0, 0, 0.8], vertext, indices);
         });
+        var bezierObj: lineObject = {};
+        var degenerateBezierObj: lineObject = {};
+        var straightObj: lineObject = {};
+        var arcObj: lineObject = {};
+        var NURBS6Obj: lineObject = {};
+        smap.advancedCurveList.forEach(l => {
+            const key = l.endPos.instanceName + "-" + l.startPos.instanceName;
+            switch (l.className) {
+                case "BezierPath":
+
+                    if (key in bezierObj &&
+                        l.startPos.pos.x == bezierObj[key].line.endPos.pos.x &&
+                        l.startPos.pos.y == bezierObj[key].line.endPos.pos.y &&
+                        l.endPos.pos.x == bezierObj[key].line.startPos.pos.x &&
+                        l.endPos.pos.y == bezierObj[key].line.startPos.pos.y &&
+                        l.controlPos1.x == bezierObj[key].line.controlPos2.x &&
+                        l.controlPos1.y == bezierObj[key].line.controlPos2.y &&
+                        l.controlPos2.x == bezierObj[key].line.controlPos1.x &&
+                        l.controlPos2.y == bezierObj[key].line.controlPos1.y
+                    ) {
+                        bezierObj[key].arrow = LineArrow.TowWay;
+                    } else {
+                        bezierObj[l.instanceName] = { arrow: LineArrow.OneWay, line: l };
+                    }
+                    break;
+                case "DegenerateBezier":
+                    if (key in degenerateBezierObj &&
+                        l.startPos.pos.x == degenerateBezierObj[key].line.endPos.pos.x &&
+                        l.startPos.pos.y == degenerateBezierObj[key].line.endPos.pos.y &&
+                        l.endPos.pos.x == degenerateBezierObj[key].line.startPos.pos.x &&
+                        l.endPos.pos.y == degenerateBezierObj[key].line.startPos.pos.y &&
+                        l.controlPos1.x == degenerateBezierObj[key].line.controlPos2.x &&
+                        l.controlPos1.y == degenerateBezierObj[key].line.controlPos2.y &&
+                        l.controlPos2.x == degenerateBezierObj[key].line.controlPos1.x &&
+                        l.controlPos2.y == degenerateBezierObj[key].line.controlPos1.y
+                    ) {
+                        degenerateBezierObj[key].arrow = LineArrow.TowWay;
+                    } else {
+                        degenerateBezierObj[l.instanceName] = { arrow: LineArrow.OneWay, line: l };
+                    }
+                    break;
+                case "StraightPath":
+                    if (key in straightObj &&
+                        l.startPos.pos.x == straightObj[key].line.endPos.pos.x &&
+                        l.startPos.pos.y == straightObj[key].line.endPos.pos.y &&
+                        l.endPos.pos.x == straightObj[key].line.startPos.pos.x &&
+                        l.endPos.pos.y == straightObj[key].line.startPos.pos.y
+                    ) {
+                        straightObj[key].arrow = LineArrow.TowWay;
+                    } else {
+                        straightObj[l.instanceName] = { arrow: LineArrow.OneWay, line: l };
+                    }
+                    break;
+                case "ArcPath":
+                    if (key in arcObj &&
+                        l.startPos.pos.x == arcObj[key].line.endPos.pos.x &&
+                        l.startPos.pos.y == arcObj[key].line.endPos.pos.y &&
+                        l.endPos.pos.x == arcObj[key].line.startPos.pos.x &&
+                        l.endPos.pos.y == arcObj[key].line.startPos.pos.y &&
+                        l.controlPos1.x == arcObj[key].line.controlPos1.x &&
+                        l.controlPos1.y == arcObj[key].line.controlPos1.y
+                    ) {
+                        arcObj[key].arrow = LineArrow.TowWay;
+                    } else {
+                        arcObj[l.instanceName] = { arrow: LineArrow.OneWay, line: l };
+                    }
+                    break;
+                case "NURBS6":
+                    if (key in NURBS6Obj &&
+                        l.startPos.pos.x == NURBS6Obj[key].line.endPos.pos.x &&
+                        l.startPos.pos.y == NURBS6Obj[key].line.endPos.pos.y &&
+                        l.endPos.pos.x == NURBS6Obj[key].line.startPos.pos.x &&
+                        l.endPos.pos.y == NURBS6Obj[key].line.startPos.pos.y &&
+                        l.controlPos1.x == NURBS6Obj[key].line.controlPos4.x &&
+                        l.controlPos1.y == NURBS6Obj[key].line.controlPos4.y &&
+                        l.controlPos2.x == NURBS6Obj[key].line.controlPos3.x &&
+                        l.controlPos2.y == NURBS6Obj[key].line.controlPos3.y &&
+                        l.controlPos3.x == NURBS6Obj[key].line.controlPos2.x &&
+                        l.controlPos3.y == NURBS6Obj[key].line.controlPos2.y &&
+                        l.controlPos4.x == NURBS6Obj[key].line.controlPos1.x &&
+                        l.controlPos4.y == NURBS6Obj[key].line.controlPos1.y
+                    ) {
+                        NURBS6Obj[key].arrow = LineArrow.TowWay;
+                    } else {
+                        NURBS6Obj[l.instanceName] = { arrow: LineArrow.OneWay, line: l };
+                    }
+                    break;
+            }
+        });
+
+        MapReader.calcBezierMesh(bezierObj, [170 / 255, 85 / 255, 0, 0.8], vertext, indices);
+        MapReader.calcDegenerateBezierMesh(degenerateBezierObj, [170.0 / 255, 200 / 255, 0, 0.8], vertext, indices);
+        MapReader.calcStraightMesh(straightObj, [18 / 255, 150 / 255, 219 / 255, 0.8], vertext, indices);
+        MapReader.calcArcMesh(arcObj, [134 / 255, 13 / 255, 214 / 255, 0.8], vertext, indices);
+        MapReader.calcNURBS6Mesh(NURBS6Obj, [0, 1, 246 / 255, 0.8], vertext, indices);
+
         this.lines = new Float32Array(vertext);
         this.linesIndices = new Uint32Array(indices);
     }
