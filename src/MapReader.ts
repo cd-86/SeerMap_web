@@ -4,6 +4,16 @@ enum LineArrow {
     TowWay
 }
 
+enum Align {
+    Left = 0x0001,
+    Right = 0x0002,
+    HCenter = 0x0004,
+    Top = 0x0008,
+    Bottom = 0x0010,
+    VCenter = 0x0020,
+    Center = VCenter | HCenter
+}
+
 type lineObject = {
     [key: string]: {
         arrow: LineArrow,
@@ -460,11 +470,64 @@ class MapReader {
         this.linesIndices = new Uint32Array(indices);
     }
 
+    private static calcStringMesh(str: string, x: number, y: number, scale: number, align: Align, color: number[], vertext: number[], indices: number[]) {
+        var w: number[] = [0]
+        for (const c of str) {
+            if (c == "\n") {
+                w.push(0);
+                continue;
+            }
+            let k = fontTexCoords.hasOwnProperty(c) ? <keyof typeof fontTexCoords>c : "?";
+            w[w.length - 1] += fontTexCoords[k].advance * scale;
+        }
+
+        if (align & Align.HCenter)
+            for (let i = 0; i < w.length; i++)
+                w[i] = x - w[i] / 2;
+        else if (align & Align.Right)
+            for (let i = 0; i < w.length; i++)
+                w[i] = x - w[i];
+        else
+            for (let i = 0; i < w.length; i++)
+                w[i] = x;
+
+        if (align & Align.VCenter)
+            y += (w.length - 1) * 48 * scale - 24 * scale;
+        else if (align & Align.Bottom)
+            y += w.length * 48 * scale;
+
+        x = w[0];
+        
+        let line = 0, x1, x2, y1, y2;
+        for (const c of str) {
+            if (c == "\n") {
+                line += 1;
+                x = w[line];
+                y -= 48 * scale;
+                continue;
+            }
+            let k = fontTexCoords.hasOwnProperty(c) ? <keyof typeof fontTexCoords>c : "?";
+            const obj = fontTexCoords[k];
+            x1 = x + obj.bearingX * scale;
+            y1 = y + obj.bearingY * scale;
+            x2 = x1 + obj.width * scale;
+            y2 = y1 - obj.height * scale;
+            
+            let index = vertext.length / 8;
+            vertext.push(
+                x1, y1, obj.topLeft.x, obj.topLeft.y, color[0], color[1], color[2], color[3],
+                x2, y1, obj.topRight.x, obj.topRight.y, color[0], color[1], color[2], color[3],
+                x2, y2, obj.bottomRight.x, obj.bottomRight.y, color[0], color[1], color[2], color[3],
+                x1, y2, obj.bottomLeft.x, obj.bottomLeft.y, color[0], color[1], color[2], color[3]
+            );
+            indices.push(index + 0, index + 1, index + 2, index + 0, index + 2, index + 3);
+            x += obj.advance * scale;
+        }
+
+    }
+
     // 站点 ~~高级区域 二维码区域 库位 ...~~
     public readMapMesh(smap: Seer.Map) {
-        var vertext: number[] = [];
-        var indices: number[] = [];
-
         if (smap.advancedPointList?.length != 0) {
             this.meshesBound = [
                 smap.advancedPointList[0].pos.x || 0,
@@ -473,9 +536,6 @@ class MapReader {
                 smap.advancedPointList[0].pos.y || 0
             ];
         }
-
-        var index = 0;
-        const LEN = 0.2;
         const textCoords = {
             LocationMark: { p1: { x: 0, y: 0 }, p2: { x: 1 / 9, y: 0 }, p3: { x: 1 / 9, y: 1 }, p4: { x: 0, y: 1 } },
             ActionPoint: { p1: { x: 1 / 9, y: 0 }, p2: { x: 2 / 9, y: 0 }, p3: { x: 2 / 9, y: 1 }, p4: { x: 1 / 9, y: 1 } },
@@ -486,6 +546,9 @@ class MapReader {
             TransferLocation: { p1: { x: 6 / 9, y: 0 }, p2: { x: 7 / 9, y: 0 }, p3: { x: 7 / 9, y: 1 }, p4: { x: 6 / 9, y: 1 } },
             WorkingLocation: { p1: { x: 7 / 9, y: 0 }, p2: { x: 8 / 9, y: 0 }, p3: { x: 8 / 9, y: 1 }, p4: { x: 7 / 9, y: 1 } }
         }
+        var vertext: number[] = [];
+        var indices: number[] = [];
+        const LEN = 0.2;
         smap.advancedPointList?.forEach((ap) => {
             let x = ap.pos.x || 0;
             let y = ap.pos.y || 0;
@@ -507,14 +570,15 @@ class MapReader {
 
             let coord = textCoords[<keyof typeof textCoords>ap.className]
             let ignoreDir = (ap.ignoreDir || false) ? 1 : 0;
+            let index = vertext.length / 8;
             vertext.push(
-                x1, y1, coord.p1.x, coord.p1.y, 0, ignoreDir,
-                x2, y2, coord.p2.x, coord.p2.y, 1, ignoreDir,
-                x3, y3, coord.p3.x, coord.p3.y, 1, ignoreDir,
-                x4, y4, coord.p4.x, coord.p4.y, 0, ignoreDir
+                x1, y1, coord.p1.x, coord.p1.y, 0, 0, ignoreDir, -1,
+                x2, y2, coord.p2.x, coord.p2.y, 1, 0, ignoreDir, -1,
+                x3, y3, coord.p3.x, coord.p3.y, 1, 0, ignoreDir, -1,
+                x4, y4, coord.p4.x, coord.p4.y, 0, 0, ignoreDir, -1
             );
             indices.push(index + 0, index + 1, index + 2, index + 0, index + 2, index + 3);
-            index += 4;
+            MapReader.calcStringMesh(ap.instanceName, x, y - 0.2, 0.003, Align.Center, [0, 0, 0, 1], vertext, indices);
         });
         this.meshes = new Float32Array(vertext);
         this.meshesIndices = new Uint32Array(indices);

@@ -2,7 +2,7 @@
   "compilerOptions": {
     "outFile": "../script.js",
     "target": "es5",  
-    "strict": true  
+    "strict": true
   },  
   "include": [  
     "*.ts"
