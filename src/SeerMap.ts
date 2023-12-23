@@ -6,8 +6,12 @@ class SeerMap {
     private mapPoint: MapPoint;
     private mapLine: MapLine;
     private mapMesh: MapMesh;
+    private robot: Robot;
     private camera: Camera2D;
     private mousePrePos: number[];
+    private x: number = 0;
+    private y: number = 0;
+    private angle: number = 0;
 
     constructor(canvas: HTMLCanvasElement) {
         this.mousePrePos = [0, 0, 0];
@@ -22,6 +26,7 @@ class SeerMap {
         window.addEventListener('mousemove', this.mouseMoved.bind(this));
         // 滚轮事件
         canvas.addEventListener('wheel', this.mouseWheel.bind(this));
+
         this.camera = new Camera2D(canvas.width, canvas.height);
         /*** 实例化着色器程序************************************************************/
         this.gl.clearColor(0, 0, 0, 1);
@@ -31,6 +36,7 @@ class SeerMap {
         this.mapPoint = new MapPoint(this.gl);
         this.mapLine = new MapLine(this.gl);
         this.mapMesh = new MapMesh(this.gl);
+        this.robot = new Robot(this.gl);
         /*******************************************************************************/
         this.resizeGL();
         this.draw();
@@ -50,6 +56,7 @@ class SeerMap {
         this.gl.enable(this.gl.BLEND);
         this.mapLine.draw(this.camera);
         this.mapMesh.draw(this.camera);
+        this.robot.draw(this.camera);
         this.gl.disable(this.gl.BLEND);
         this.xyzAxis.draw(this.camera);
     }
@@ -66,6 +73,11 @@ class SeerMap {
         if (reader.meshes, reader.meshesIndices)
             this.mapMesh.setData(reader.meshes, reader.meshesIndices);
         this.mapBg.setBound(reader.pointsBound, 10);
+        this.draw();
+    }
+
+    public setRobotShape(width: number, head: number, tail: number) {
+        this.robot.setShape(width, head, tail);
         this.draw();
     }
 
@@ -91,7 +103,7 @@ class SeerMap {
     }
 
     private mouseWheel(event: WheelEvent) {
-        const offset = event.deltaY > 0 ? 0.9 : 1.1;
+        const offset = event.deltaY < 0 ? 0.9 : 1.1;
         this.camera.cameraZoom(offset, offset);
         this.camera.updateCamera();
         this.draw();

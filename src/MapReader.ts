@@ -20,6 +20,17 @@ type lineObject = {
         line: Seer.AdvancedCurve
     }
 };
+
+class vertextData {
+    public vertext: Float32Array;
+    public indices: Uint32Array;
+    constructor(vertext: number[], indices: number[]) {
+        this.vertext = new Float32Array(vertext);
+        this.indices = new Uint32Array(indices);
+    }
+
+}
+
 const N: number = 100;
 class MapReader {
     public points!: Float32Array;
@@ -497,7 +508,7 @@ class MapReader {
             y += w.length * 48 * scale;
 
         x = w[0];
-        
+
         let line = 0, x1, x2, y1, y2;
         for (const c of str) {
             if (c == "\n") {
@@ -512,7 +523,7 @@ class MapReader {
             y1 = y + obj.bearingY * scale;
             x2 = x1 + obj.width * scale;
             y2 = y1 - obj.height * scale;
-            
+
             let index = vertext.length / 8;
             vertext.push(
                 x1, y1, obj.topLeft.x, obj.topLeft.y, color[0], color[1], color[2], color[3],
@@ -582,5 +593,101 @@ class MapReader {
         });
         this.meshes = new Float32Array(vertext);
         this.meshesIndices = new Uint32Array(indices);
+    }
+
+    // 小车
+    public static calcRobotVertextAndIndicesData(width: number, head: number, tail: number): vertextData {
+        let x1, x2, x3, x4, x5, x6, x7, x8, y1, y2, y3, y4, y5, y6, y7, y8;
+        x1 = x4 = -tail;
+        x2 = x5 = 0;
+        x3 = x6 = head;
+        y1 = y2 = y3 = width / 2;
+        y4 = y5 = y6 = -y1;
+
+        var vertext: number[] = [];
+        var indices: number[] = [];
+        // tail
+        vertext.push(
+            x1, y1, 9 / 255, 142 / 255, 227 / 255, 100 / 255,
+            x2, y2, 9 / 255, 142 / 255, 227 / 255, 100 / 255,
+            x4, y4, 9 / 255, 142 / 255, 227 / 255, 100 / 255,
+            x5, y5, 9 / 255, 142 / 255, 227 / 255, 100 / 255,
+        );
+        indices.push(0, 1, 2, 1, 2, 3);
+        // head
+        vertext.push(
+            x2, y2, 9 / 255, 109 / 255, 54 / 255, 100 / 255,
+            x3, y3, 9 / 255, 109 / 255, 54 / 255, 100 / 255,
+            x5, y5, 9 / 255, 109 / 255, 54 / 255, 100 / 255,
+            x6, y6, 9 / 255, 109 / 255, 54 / 255, 100 / 255,
+        );
+        indices.push(4, 5, 6, 5, 6, 7);
+        // center
+        let v1 = 0.015, v2 = 0.115;
+
+        vertext.push(
+            -v2, v1, 0, 1, 0, 0.6,
+            v2, v1, 0, 1, 0, 0.6,
+            v2, -v1, 0, 1, 0, 0.6,
+            -v2, -v1, 0, 1, 0, 0.6,
+
+            -v1, v2, 0, 1, 0, 0.6,
+            v1, v2, 0, 1, 0, 0.6,
+            v1, -v2, 0, 1, 0, 0.6,
+            -v1, -v2, 0, 1, 0, 0.6,
+        );
+        indices.push(8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15);
+        //border
+        let xlo = x1 - 0.01;
+        let xli = x1 + 0.01;
+        let xro = x3 + 0.01;
+        let xri = x3 - 0.01;
+
+        let yto = y1 + 0.01;
+        let yti = y1 - 0.01;
+        let ybo = y4 - 0.01;
+        let ybi = y4 + 0.01;
+
+        vertext.push(
+            xlo, yto, 0.0, 0.45, 0.0, 0.6,
+            xli, yto, 0.0, 0.45, 0.0, 0.6,
+            xlo, ybo, 0.0, 0.45, 0.0, 0.6,
+            xli, ybo, 0.0, 0.45, 0.0, 0.6,
+
+            xro, yto, 0.0, 0.45, 0.0, 0.6,
+            xri, yto, 0.0, 0.45, 0.0, 0.6,
+            xro, ybo, 0.0, 0.45, 0.0, 0.6,
+            xri, ybo, 0.0, 0.45, 0.0, 0.6,
+
+            xli, yto, 0.0, 0.45, 0.0, 0.6,
+            xri, yto, 0.0, 0.45, 0.0, 0.6,
+            xli, yti, 0.0, 0.45, 0.0, 0.6,
+            xri, yti, 0.0, 0.45, 0.0, 0.6,
+
+            xli, ybo, 0.0, 0.45, 0.0, 0.6,
+            xri, ybo, 0.0, 0.45, 0.0, 0.6,
+            xli, ybi, 0.0, 0.45, 0.0, 0.6,
+            xri, ybi, 0.0, 0.45, 0.0, 0.6,
+        );
+        indices.push(
+            16, 17, 18, 17, 18, 19,
+            20, 21, 22, 21, 22, 23,
+            24, 25, 26, 25, 26, 27,
+            28, 29, 30, 29, 30, 31,
+        );
+        // arrow
+        y1 = head / 5;
+        x1 = x2 = y1 * 3;
+        y2 = -y1;
+        x3 = y1 * 4;
+        y3 = 0;
+        vertext.push(
+            x1, y1, 1.0, 0.0, 0.0, 0.6,
+            x2, y2, 1.0, 0.0, 0.0, 0.6,
+            x3, y3, 1.0, 0.0, 0.0, 0.6,
+        );
+        indices.push(32, 33, 34);
+
+        return new vertextData(vertext, indices);
     }
 }

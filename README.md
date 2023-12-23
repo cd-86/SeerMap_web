@@ -1,3 +1,3 @@
 ```
-tsc --build .\tsconfig.json
+tsc --build src\tsconfig.json
 ```

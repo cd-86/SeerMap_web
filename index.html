@@ -48,6 +48,7 @@
                 var fileContent = e.target.result;
                 var obj = JSON.parse(fileContent);
                 seerMap.readMap(obj);
+                seerMap.setRobotShape(1, 1, 1);
                 // // 显示文件内容
                 // console.log(fileContent);
             };
